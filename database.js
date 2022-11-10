@@ -3,7 +3,7 @@ import mysql from 'mysql2/promise';
 // Database Connection ---------------------------
 
 const dbConfig = {
-  database: process.env.DB_NAME || 'usecase1',
+  database: process.env.DB_NAME || 'projectk2017731',
   port: process.env.DB_PORT || 3306,
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
