@@ -18,6 +18,8 @@ app.use(function (req, res, next) {
 });
 
 app.use(cors({ origin: '*' }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 // Controllers -------------------------
 
 const buildSetFields = (fields) => fields.reduce((setSQL, field, index) =>
@@ -28,11 +30,19 @@ const postTasksController = async (req, res) => {
   
     // Access data
     const sql = createTasks(req.body);
-    const { isSuccess, result, message: accessorMessage } = await create(sql,req.body);
-    if (!isSuccess) return res.status(400).json({ message: accessorMessage });
+    console.log(req.body)
+    console.log(sql)
+    /*{ iconst sSuccess, result, message: accessorMessage } = await*/ create(sql,req.body);
+   // if (!isSuccess) return res.status(400).json({ message: accessorMessage });
     
     // Response to request
-    res.status(201).json(result);
+   // res.status(201).json(result);
+  };
+
+const createTasks = (record) => {
+    let table = 'tasks';
+    let mutableFields = ['TaskTitle', 'TaskDescription', 'TaskStatus', 'TaskSetDate', 'TaskDeadline', 'GroupID'];
+    return `INSERT INTO ${table} ` + buildSetFields(mutableFields);
   };
 
 const create = async (sql,record) => {
@@ -48,11 +58,7 @@ const create = async (sql,record) => {
     }
 };
 
-const createTasks = (record) => {
-    let table = 'tasks';
-    let mutableFields = ['TaskTitle', 'TaskDescription', 'TaskStatus', 'TaskSetDate', 'TaskDeadline', 'GroupID'];
-    return `INSERT INTO ${table} ` + buildSetFields(mutableFields);
-  };
+
 
 
 const groupsOfUserController = async (req, res) => {
@@ -124,12 +130,10 @@ const GroupmemberTasksController = async (req, res) => {
 const getGroupsTasks = async (req, res) => {
   const id = req.params.id;
   //Build SQL
-  const table = 'tasks on taskassignment.TaskID=tasks.TaskID';
+  const table = 'tasks';
   const whereField = 'tasks.GroupID';
   const fields = ['tasks.TaskID','tasks.TaskTitle', 'tasks.TaskDescription', 'tasks.TaskStatus', 'tasks.TaskSetDate', 'tasks.TaskDeadline']
-  const extendedTable = `taskassignment INNER JOIN ${table}`;
-  const extendedFields = `${fields}`;
-  const sql = `SELECT ${extendedFields} FROM ${extendedTable} WHERE ${whereField}=${id}`;
+  const sql = `SELECT ${fields} FROM ${table} WHERE ${whereField}=${id}`;
  
   //Execute Query
   let isSuccess = false;
@@ -157,13 +161,11 @@ const getGroupTask = async (req, res) => {
   const id2 = req.params.id2;
 
   //Build SQL
-  const table = 'tasks on taskassignment.TaskID=tasks.TaskID';
+  const table = 'tasks';
   const whereField = 'tasks.GroupID';
-  const whereField2 = 'taskassignment.TaskID';
+  const whereField2 = 'tasks.TaskID';
   const fields = ['tasks.TaskID','tasks.TaskTitle', 'tasks.TaskDescription', 'tasks.TaskStatus', 'tasks.TaskSetDate', 'tasks.TaskDeadline']
-  const extendedTable = `taskassignment INNER JOIN ${table}`;
-  const extendedFields = `${fields}`;
-  const sql = `SELECT ${extendedFields} FROM ${extendedTable} WHERE ${whereField}=${id1} and ${whereField2}=${id2}`;
+  const sql = `SELECT ${fields} FROM ${table} WHERE ${whereField}=${id1} and ${whereField2}=${id2}`;
   
   //Execute Query
   let isSuccess = false;
@@ -191,7 +193,7 @@ const getTasks = async (req, res) => {
   const fields = ['TaskID','TaskTitle', 'TaskDescription', 'TaskStatus', 'TaskSetDate', 'TaskDeadline']
   const table = ['tasks']
   const sql = `SELECT ${fields} FROM ${table}`;
-  console.log(sql);
+  
   //Execute Query
   let isSuccess = false;
   let message = "";
