@@ -28,15 +28,20 @@ const buildSetFields = (fields) => fields.reduce((setSQL, field, index) =>
 const postTasksController = async (req, res) => {
     // Validate request
   
+    //Conformance
+    //takes the req.body as a parameter, then use replace and slice as an example to refactor the dates
+    //create a conformance method.
+    // so like dateConformance(object)
+    // tasks.taskSetDate.replace then slice
+    // tasks.taskDeadline
+
     // Access data
     const sql = createTasks(req.body);
-    console.log(req.body)
-    console.log(sql)
-    /*{ iconst sSuccess, result, message: accessorMessage } = await*/ create(sql,req.body);
-   // if (!isSuccess) return res.status(400).json({ message: accessorMessage });
+    const { isSuccess, result, message: accessorMessage } = await create(sql,req.body);
+    if (!isSuccess) return res.status(400).json({ message: accessorMessage });
     
     // Response to request
-   // res.status(201).json(result);
+    res.status(201).json(result);
   };
 
 const createTasks = (record) => {
@@ -242,11 +247,6 @@ const getTask = async (req, res) => {
     ? res.status(200).json(result)
     : res.status(400).json({ message })
 };
-
-const createTask = async (req, res) => {
-  var query = "INSERT INTO tasks (TaskTitle, TaskDescription, TaskStatus, TaskSetDate, TaskDueDate, GroupID) VALUES {'"+req.body.TaskTitle+','+req.body.Description+','+req.body.TaskStatus+','+req.body.TaskSetDate+','+req.body.TaskDeadline+','+req.params.id+"}";
-    database.query(res, query);
-}
 
 // Endpoints ---------------------------
 
