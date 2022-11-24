@@ -54,6 +54,28 @@ const create = async (sql,record) => {
     try {
       const status = await database.query(sql,record);
 
+      const table = 'tasks';
+      const whereField = 'tasks.TaskID';
+      const fields = ['tasks.TaskID','tasks.TaskTitle', 'tasks.TaskDescription', 'tasks.TaskStatus', 'tasks.TaskSetDate', 'tasks.TaskDeadline']
+      const sql2 = `SELECT ${fields} FROM ${table} WHERE ${whereField}=${status[0].insertId}`;
+
+      console.log(sql2)
+
+      let isSuccess = false;
+      let message = "";
+      let result = null;
+      try {
+      [result] = await database.query(sql2);
+      if (result.length === 0) message ="No records found";
+      else {
+        isSuccess = true;
+        message = 'Records successfully recovered';
+      }
+      }
+      catch (error) {
+        message = `-Failed to execute message ${error.message}`
+      }
+
       return isSuccess
         ? { isSuccess: true, result: result, message: 'Record successfully recovered' }
         : { isSuccess: false, result: null, message: `Failed to recover the inserted record: ${message}` };
