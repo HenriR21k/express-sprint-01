@@ -36,7 +36,7 @@ const postTasksController = async (req, res) => {
     // tasks.taskDeadline
 
     // Access data
-    const sql = createTasks(req.body);
+    const sql = createTasks();
     const { isSuccess, result, message: accessorMessage } = await create(sql,req.body);
     if (!isSuccess) return res.status(400).json({ message: accessorMessage });
     
@@ -44,10 +44,18 @@ const postTasksController = async (req, res) => {
     res.status(201).json(result);
   };
 
-const createTasks = (record) => {
+
+
+const createTasks = () => {
     let table = 'tasks';
     let mutableFields = ['TaskTitle', 'TaskDescription', 'TaskStatus', 'TaskSetDate', 'TaskDeadline', 'GroupID'];
     return `INSERT INTO ${table} ` + buildSetFields(mutableFields);
+  };
+
+const buildTasksUpdateSql = () => {
+    let table = 'tasks';
+    let mutableFields = ['TaskTitle', 'TaskDescription', 'TaskStatus', 'TaskSetDate', 'TaskDeadline', 'GroupID'];
+    return `UPDATE ${table} ` + buildSetFields(mutableFields) + ` WHERE TaskID=:TaskID`;
   };
 
 const create = async (sql,record) => {
@@ -83,6 +91,54 @@ const create = async (sql,record) => {
     catch (error) {
       return { isSuccess: false, result: null, message: `Failed to execute query: ${error.message}` };
     }
+};
+
+const putTasksController = async (req, res) => {
+  // Validate request
+  const id = req.params.id;
+  const record = req.body;
+
+  // Access data
+  const sql = buildTasksUpdateSql();
+  const { isSuccess, result, message: accessorMessage } = await updateTasks(sql, id, record);
+  if (!isSuccess) return res.status(400).json({ message: accessorMessage });
+  
+  // Response to request
+  res.status(200).json(result);
+  
+}
+
+const updateTasks = async (sql, id, record) => {
+  try {
+    const status = await database.query(sql, { ...record, TaskID: id } );
+
+    const table = 'tasks';
+    const whereField = 'tasks.TaskID';
+    const fields = ['tasks.TaskID','tasks.TaskTitle', 'tasks.TaskDescription', 'tasks.TaskStatus', 'tasks.TaskSetDate', 'tasks.TaskDeadline']
+    const sql2 = `SELECT ${fields} FROM ${table} WHERE ${whereField}=${status[0].insertId}`;
+
+    let isSuccess = false;
+    let message = "";
+    let result = null;
+    try {
+    [result] = await database.query(sql2);
+    if (result.length === 0) message ="No records found";
+    else {
+      isSuccess = true;
+      message = 'Records successfully recovered';
+    }
+    }
+    catch (error) {
+      message = `-Failed to execute message ${error.message}`
+    }
+
+    return isSuccess
+      ? { isSuccess: true, result: result, message: 'Record successfully recovered' }
+      : { isSuccess: false, result: null, message: `Failed to recover the inserted record: ${message}` };
+  }
+  catch (error) {
+    return { isSuccess: false, result: null, message: `Failed to execute query: ${error.message}` };
+  }
 };
 
 
@@ -282,6 +338,7 @@ app.get('/api/tasks', getTasks) //All tasks
 app.get('/api/tasks/:id', getTask) //Specific Task
 
 app.post('/api/tasks', postTasksController); //Create a task for a group
+app.put('/api/tasks/:id', putTasksController); //Edit a task in a group
 
 
 
