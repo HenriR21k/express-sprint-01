@@ -145,7 +145,7 @@ const updateTasks = async (sql, id, record) => {
 
 const buildUsersGroupsSelectSql = (id,variant) => {
   let sql = '';
-  let table = '`Groupmembers INNER JOIN Groups ON Groupmembers.GroupID=Groups.GroupID ';  
+  let table = 'Groupmembers INNER JOIN Groups ON Groupmembers.GroupID=Groups.GroupID ';  
   let fields = ['Groups.GroupID', 'Groups.GroupName']
   
   switch(variant) {
@@ -175,26 +175,11 @@ const getUserGroupsController = async (req, res) => {
   const id = req.params.id;
   //Build SQL
   const sql = buildUsersGroupsSelectSql(id, null);
- 
-  //Execute Query
-  let isSuccess = false;
-  let message = "";
-  let result = null;
-  try {
-  [result] = await database.query(sql);
-  if (result.length === 0) message ="No records found";
-  else {
-    isSuccess = true;
-    message = 'Records successfully recovered';
-  }
-  }
-  catch (error) {
-    message = `-Failed to execute message ${error.message}`
-  }
-  //Response
-  isSuccess
-    ? res.status(200).json(result)
-    : res.status(400).json({ message })
+  const { isSuccess, result, message } = await read(sql);
+  if(!isSuccess) return res.status(404).json({message});
+
+  //Response to request
+  res.status(200).json(result);
 };
 
 const buildTasksSelectSql = (id1, id2, variant) => {
@@ -297,7 +282,7 @@ app.get('/api/groups/users/:id', getUserGroupsController); //All groups a user i
 
 app.get('/api/groups/:id1/users/:id2/tasks', GroupmemberTasksController); //All tasks assigned to a user in a group
 app.get('/api/groups/:id/tasks', getGroupsTasks); //All tasks belonging to a group
-app.get('/api/groups/:id1/tasks/:id2', getGroupTask) // Get a task belonging to a group
+app.get('/api/tasks/:id2/groups/:id1', getGroupTask) // Get a task belonging to a group
 app.get('/api/tasks', getTasks) //All tasks
 app.get('/api/tasks/:id1', getTask) //Specific Task
 
