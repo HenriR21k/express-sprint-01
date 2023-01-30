@@ -188,6 +188,11 @@ const buildTasksSelectSql = (id1, id2, variant) => {
   let table = 'tasks';
   let extendedTable = '';
 
+  // let test = `SELECT taskassignment.UserID, users.firstName
+  // FROM taskassignment
+  // INNER JOIN users ON taskassignment.UserID = users.UserID
+  // WHERE taskassignment.TaskID = 9`;
+
   switch(variant) {
     default:
       sql = `SELECT ${fields} FROM ${table} WHERE TaskID=${id1}`;
@@ -208,10 +213,38 @@ const buildTasksSelectSql = (id1, id2, variant) => {
       fields = ['tasks.TaskID', 'tasks.TaskTitle']
       extendedTable = `taskassignment INNER JOIN ${table}`;
       sql = `SELECT ${fields} FROM ${extendedTable} WHERE tasks.GroupID=${id1} and taskassignment.userID=${id2} and tasks.TaskStatus=\'Outstanding\'`
-
+      break;
+    case 'TaskUsers':
+      fields = [`taskassignment.UserID, users.firstName`]
+      table = `users ON taskassignment.UserID = users.UserID`
+      extendedTable = `taskassignment INNER JOIN ${table}`
+      //sql = test;
+      sql = `SELECT ${fields} FROM ${extendedTable} WHERE taskassignment.TaskID=${id1}`
+      break;
   }
 
   return sql;
+}
+
+const buildPostsSelectSQL = (id1, id2, variant) => {
+  let sql = '';
+  let fields = ['posts.PostID, posts.UserID, posts.TaskID, posts.PostTitle, posts.PostDescription, posts.PostDate'];
+  let table = 'posts';
+  let extendedTable = '';
+
+  switch(variant) {
+    default:
+      sql = `SELECT ${fields} FROM ${table} WHERE PostID=${id1}`;
+      break;
+    case 'TaskPosts':
+      table = 'tasks on posts.TaskID=tasks.TaskID'
+      extendedTable = `posts INNER JOIN ${table}`;
+      sql = `SELECT ${fields} FROM ${extendedTable} WHERE posts.TaskID = ${id1}`
+      break;
+  }
+
+  return sql;
+
 }
 
 
@@ -275,10 +308,32 @@ const getTask = async (req, res) => {
   res.status(200).json(result);
 };
 
+const getTaskPosts = async (req, res) => {
+  const id1 = req.params.id1;
+  const sql = buildPostsSelectSQL(id1, null, 'TaskPosts')
+  const { isSuccess, result, message } = await read(sql);
+  if(!isSuccess) return res.status(404).json({message});
+
+  //Response to request
+  res.status(200).json(result);
+};
+
+const getUsersAssignedToTask = async (req, res) => {
+  const id1 = req.params.id1;
+  const sql = buildTasksSelectSql(id1, null, 'TaskUsers')
+  const { isSuccess, result, message } = await read(sql);
+  if(!isSuccess) return res.status(404).json({message});
+
+  //Response to request
+  res.status(200).json(result);
+};
+
+
 // Endpoints ---------------------------
 
 //app.get('/api/groups', groupsController);
 app.get('/api/groups/users/:id', getUserGroupsController); //All groups a user is in
+app.get('/api/tasks/:id1/users', getUsersAssignedToTask); 
 
 app.get('/api/groups/:id1/users/:id2/tasks', GroupmemberTasksController); //All tasks assigned to a user in a group
 app.get('/api/groups/:id/tasks', getGroupsTasks); //All tasks belonging to a group
@@ -288,6 +343,8 @@ app.get('/api/tasks/:id1', getTask) //Specific Task
 
 app.post('/api/tasks', postTasksController); //Create a task for a group
 app.put('/api/tasks/:id', putTasksController); //Edit a task in a group
+
+app.get('/api/tasks/:id1/posts', getTaskPosts);
 
 
 
