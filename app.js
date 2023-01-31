@@ -215,7 +215,7 @@ const buildTasksSelectSql = (id1, id2, variant) => {
       sql = `SELECT ${fields} FROM ${extendedTable} WHERE tasks.GroupID=${id1} and taskassignment.userID=${id2} and tasks.TaskStatus=\'Outstanding\'`
       break;
     case 'TaskUsers':
-      fields = [`taskassignment.UserID, users.firstName`]
+      fields = [`taskassignment.UserID, users.firstName, users.lastName`]
       table = `users ON taskassignment.UserID = users.UserID`
       extendedTable = `taskassignment INNER JOIN ${table}`
       //sql = test;
@@ -328,12 +328,41 @@ const getUsersAssignedToTask = async (req, res) => {
   res.status(200).json(result);
 };
 
+const buildUsersSelectSql = (id1, id2, variant) => {
+  let sql = '';
+  let fields = ['firstName, lastName'];
+  let table = 'Users';
+  let extendedTable = '';
+
+  switch(variant) {
+    default:
+      sql = `SELECT ${fields} FROM ${table} WHERE UserID=${id1}`;
+      break;
+    
+  }
+
+  return sql;
+
+}
+
+const getUserById = async (req, res) => {
+  const id1 = req.params.id1;
+  const sql = buildUsersSelectSql(id1, null, null)
+  const { isSuccess, result, message } = await read(sql);
+  if(!isSuccess) return res.status(404).json({message});
+
+  //Response to request
+  res.status(200).json(result);
+};
+
 
 // Endpoints ---------------------------
 
 //app.get('/api/groups', groupsController);
 app.get('/api/groups/users/:id', getUserGroupsController); //All groups a user is in
 app.get('/api/tasks/:id1/users', getUsersAssignedToTask); 
+
+app.get('/api/users/:id1', getUserById); //Gets a specific user
 
 app.get('/api/groups/:id1/users/:id2/tasks', GroupmemberTasksController); //All tasks assigned to a user in a group
 app.get('/api/groups/:id/tasks', getGroupsTasks); //All tasks belonging to a group
