@@ -26,15 +26,6 @@ const buildSetFields = (fields) => fields.reduce((setSQL, field, index) =>
   setSQL + `${field}=:${field}` + ((index === fields.length - 1) ? '' : ', '), 'SET ');
 
 const postTasksController = async (req, res) => {
-    // Validate request
-  
-    //Conformance
-    //takes the req.body as a parameter, then use replace and slice as an example to refactor the dates
-    //create a conformance method.
-    // so like dateConformance(object)
-    // tasks.taskSetDate.replace then slice
-    // tasks.taskDeadline
-
     // Access data
     const sql = createTasks();
     const { isSuccess, result, message: accessorMessage } = await create(sql,req.body);
@@ -44,7 +35,24 @@ const postTasksController = async (req, res) => {
     res.status(201).json(result);
   };
 
+const postModulesController = async (req, res) => {
+    // Validate request
+  
+    // Access data
+    const sql = createModules();
+    const { isSuccess, result, message: accessorMessage } = await create(sql,req.body);
+    if (!isSuccess) return res.status(400).json({ message: accessorMessage });
+    
+    // Response to request
+    res.status(201).json(result);
+  };
 
+
+const createModules = () => {
+    let table = 'modules';
+    let mutableFields = ['ModuleID', 'ModuleName', 'ModuleDescription', 'ModuleLevel', 'ModuleCode', 'ModuleStartDate', 'ModuleEndDate'];
+    return `INSERT INTO ${table} ` + buildSetFields(mutableFields);
+  };
 
 const createTasks = () => {
     let table = 'tasks';
@@ -62,18 +70,18 @@ const create = async (sql,record) => {
     try {
       const status = await database.query(sql,record);
 
-      const table = 'tasks';
-      const whereField = 'tasks.TaskID';
-      const fields = ['tasks.TaskID','tasks.TaskTitle', 'tasks.TaskDescription', 'tasks.TaskStatus', 'tasks.TaskSetDate', 'tasks.TaskDeadline']
-      const sql2 = `SELECT ${fields} FROM ${table} WHERE ${whereField}=${status[0].insertId}`;
+      // const table = 'tasks';
+      // const whereField = 'tasks.TaskID';
+      // const fields = ['tasks.TaskID','tasks.TaskTitle', 'tasks.TaskDescription', 'tasks.TaskStatus', 'tasks.TaskSetDate', 'tasks.TaskDeadline']
+      // const sql2 = `SELECT ${fields} FROM ${table} WHERE ${whereField}=${status[0].insertId}`;
 
-      console.log(sql2)
+      console.log(sql)
 
       let isSuccess = false;
       let message = "";
       let result = null;
       try {
-      [result] = await database.query(sql2);
+      [result] = await database.query(sql);
       if (result.length === 0) message ="No records found";
       else {
         isSuccess = true;
@@ -163,7 +171,6 @@ const read = async (selectSql) => {
     return (result.length === 0)
       ? { isSuccess: false, result: null, message: "No record(s) found" }
       : { isSuccess: true, result: result, message: "Records successfully recovered" }
-  
     }
     catch (error) {
       return { isSuccess: false, result: null, message: `Failed to execute message ${error.message}` };
@@ -218,7 +225,6 @@ const buildTasksSelectSql = (id1, id2, variant) => {
       fields = [`taskassignment.UserID, users.firstName, users.lastName`]
       table = `users ON taskassignment.UserID = users.UserID`
       extendedTable = `taskassignment INNER JOIN ${table}`
-      //sql = test;
       sql = `SELECT ${fields} FROM ${extendedTable} WHERE taskassignment.TaskID=${id1}`
       break;
   }
@@ -355,6 +361,34 @@ const getUserById = async (req, res) => {
   res.status(200).json(result);
 };
 
+const buildModulesSelectSQL = (id1, id2, variant) => {
+  let sql = '';
+  let fields = ['ModuleID, ModuleName, ModuleDescription, ModuleLevel, ModuleCode, ModuleStartDate, ModuleEndDate'];
+  let table = 'modules';
+  let extendedTable = '';
+
+  switch(variant) {
+    default:
+      sql = `SELECT ${fields} FROM ${table}`;
+      break;
+  }
+
+  return sql;
+
+}
+
+const getModulesController = async (req, res) => {
+  
+  //Validate Request
+
+  const sql = buildModulesSelectSQL(null, null, null)
+  const { isSuccess, result, message } = await read(sql);
+  if(!isSuccess) return res.status(404).json({message});
+
+  //Response to request
+  res.status(200).json(result);
+};
+
 
 // Endpoints ---------------------------
 
@@ -374,6 +408,9 @@ app.post('/api/tasks', postTasksController); //Create a task for a group
 app.put('/api/tasks/:id', putTasksController); //Edit a task in a group
 
 app.get('/api/tasks/:id1/posts', getTaskPosts);
+
+app.get('/api/modules', getModulesController);
+app.post('/api/modules', postModulesController);
 
 
 
