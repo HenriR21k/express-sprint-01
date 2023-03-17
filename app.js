@@ -35,6 +35,36 @@ const postTasksController = async (req, res) => {
     res.status(201).json(result);
   };
 
+  const postTaskAssignmentController = async (req, res) => {
+    // Access data
+    const sql = createAssignTasks();
+    const { isSuccess, result, message: accessorMessage } = await create(sql,req.body);
+    if (!isSuccess) return res.status(400).json({ message: accessorMessage });
+    
+    // Response to request
+    res.status(201).json(result);
+  };
+
+  const postUserModulesController = async (req, res) => {
+    // Access data
+    const sql = createAssignUserModules();
+    const { isSuccess, result, message: accessorMessage } = await create(sql,req.body);
+    if (!isSuccess) return res.status(400).json({ message: accessorMessage });
+    
+    // Response to request
+    res.status(201).json(result);
+  };
+
+  const postFeedbackController = async (req, res) => {
+    // Access data
+    const sql = createPosts();
+    const { isSuccess, result, message: accessorMessage } = await create(sql,req.body);
+    if (!isSuccess) return res.status(400).json({ message: accessorMessage });
+    
+    // Response to request
+    res.status(201).json(result);
+  };
+
 const postModulesController = async (req, res) => {
     // Validate request
   
@@ -60,28 +90,51 @@ const createTasks = () => {
     return `INSERT INTO ${table} ` + buildSetFields(mutableFields);
   };
 
+const createAssignTasks = () => {
+    let table = 'taskassignment';
+    let mutableFields = ['UserID', 'TaskID'];
+    return `INSERT INTO ${table} ` + buildSetFields(mutableFields);
+  };
+
+const createAssignUserModules = () => {
+    let table = 'modulemembers';
+    let mutableFields = ['UserID', 'ModuleID'];
+    return `INSERT INTO ${table} ` + buildSetFields(mutableFields);
+  };
+
+const createPosts = () => {
+    let table = 'posts';
+    let mutableFields = ['UserID', 'TaskID', 'PostTitle', 'PostDescription','PostDate'];
+    return `INSERT INTO ${table} ` + buildSetFields(mutableFields);
+  };
+
 const buildTasksUpdateSql = () => {
     let table = 'tasks';
     let mutableFields = ['TaskTitle', 'TaskDescription', 'TaskStatus', 'TaskSetDate', 'TaskDeadline', 'GroupID'];
     return `UPDATE ${table} ` + buildSetFields(mutableFields) + ` WHERE TaskID=:TaskID`;
   };
 
+const buildModulesUpdateSql = () => {
+    let table = 'modules';
+    let mutableFields = ['ModuleID', 'ModuleName', 'ModuleDescription', 'ModuleLevel', 'ModuleCode', 'ModuleStartDate', 'ModuleEndDate'];
+    return `UPDATE ${table} ` + buildSetFields(mutableFields) + ` WHERE ModulesID=:ModulesID`;
+  };
+
 const create = async (sql,record) => {
     try {
       const status = await database.query(sql,record);
 
-      // const table = 'tasks';
-      // const whereField = 'tasks.TaskID';
-      // const fields = ['tasks.TaskID','tasks.TaskTitle', 'tasks.TaskDescription', 'tasks.TaskStatus', 'tasks.TaskSetDate', 'tasks.TaskDeadline']
-      // const sql2 = `SELECT ${fields} FROM ${table} WHERE ${whereField}=${status[0].insertId}`;
+       const table = 'modules';
+       const whereField = 'modules.ModulesID';
+       const fields = ['modules.ModuleName, modules.ModuleDescription']
+       const sql2 = `SELECT ${fields} FROM ${table} WHERE ${whereField}=${status[0].insertId}`;
 
-      console.log(sql)
 
       let isSuccess = false;
       let message = "";
       let result = null;
       try {
-      [result] = await database.query(sql);
+      [result] = await database.query(sql2);
       if (result.length === 0) message ="No records found";
       else {
         isSuccess = true;
@@ -116,20 +169,63 @@ const putTasksController = async (req, res) => {
   
 }
 
+const putModulesController = async (req, res) => {
+  // Validate request
+  const id = req.params.id;
+  const record = req.body;
+
+  // Access data
+  const sql = buildModulesUpdateSql();
+  const { isSuccess, result, message: accessorMessage } = await updateModules(sql, id, record);
+  if (!isSuccess) return res.status(400).json({ message: accessorMessage });
+  
+  // Response to request
+  res.status(200).json(result);
+  
+}
+
 const updateTasks = async (sql, id, record) => {
   try {
     const status = await database.query(sql, { ...record, TaskID: id } );
 
-    const table = 'tasks';
-    const whereField = 'tasks.TaskID';
-    const fields = ['tasks.TaskID','tasks.TaskTitle', 'tasks.TaskDescription', 'tasks.TaskStatus', 'tasks.TaskSetDate', 'tasks.TaskDeadline']
-    const sql2 = `SELECT ${fields} FROM ${table} WHERE ${whereField}=${status[0].insertId}`;
+    // const table = 'tasks';
+    // const whereField = 'tasks.TaskID';
+    // const fields = ['tasks.TaskID','tasks.TaskTitle', 'tasks.TaskDescription', 'tasks.TaskStatus', 'tasks.TaskSetDate', 'tasks.TaskDeadline']
+    // const sql2 = `SELECT ${fields} FROM ${table} WHERE ${whereField}=${status[0].insertId}`;
 
     let isSuccess = false;
     let message = "";
     let result = null;
     try {
-    [result] = await database.query(sql2);
+    [result] = await database.query(sql);
+    if (result.length === 0) message ="No records found";
+    else {
+      isSuccess = true;
+      message = 'Records successfully recovered';
+    }
+    }
+    catch (error) {
+      message = `-Failed to execute message ${error.message}`
+    }
+
+    return isSuccess
+      ? { isSuccess: true, result: result, message: 'Record successfully recovered' }
+      : { isSuccess: false, result: null, message: `Failed to recover the inserted record: ${message}` };
+  }
+  catch (error) {
+    return { isSuccess: false, result: null, message: `Failed to execute query: ${error.message}` };
+  }
+};
+
+const updateModules = async (sql, id, record) => {
+  try {
+    const status = await database.query(sql, { ...record, ModulesID: id } );
+
+    let isSuccess = false;
+    let message = "";
+    let result = null;
+    try {
+    [result] = await database.query(sql);
     if (result.length === 0) message ="No records found";
     else {
       isSuccess = true;
@@ -344,7 +440,11 @@ const buildUsersSelectSql = (id1, id2, variant) => {
     default:
       sql = `SELECT ${fields} FROM ${table} WHERE UserID=${id1}`;
       break;
-    
+    case "userType":
+      table = 'users ON usertype.UserTypeID=users.UserTypeID'
+      extendedTable = `usertype INNER JOIN ${table}`;
+      fields = ['UserTypeName']
+      sql = `SELECT ${fields} FROM ${extendedTable} WHERE users.UserID = ${id1}`
   }
 
   return sql;
@@ -371,6 +471,7 @@ const buildModulesSelectSQL = (id1, id2, variant) => {
     default:
       sql = `SELECT ${fields} FROM ${table}`;
       break;
+      
   }
 
   return sql;
@@ -389,6 +490,20 @@ const getModulesController = async (req, res) => {
   res.status(200).json(result);
 };
 
+const getUserUserTypeController = async (req, res) => {
+
+  const id1 = req.params.id1;
+
+  const sql = buildUsersSelectSql(id1, null, "userType")
+  const { isSuccess, result, message } = await read(sql);
+  if(!isSuccess) return res.status(404).json({message});
+
+  //Response to request
+  res.status(200).json(result);
+}
+
+
+
 
 // Endpoints ---------------------------
 
@@ -397,6 +512,8 @@ app.get('/api/groups/users/:id', getUserGroupsController); //All groups a user i
 app.get('/api/tasks/:id1/users', getUsersAssignedToTask); 
 
 app.get('/api/users/:id1', getUserById); //Gets a specific user
+app.get('/api/users/:id1/userType', getUserUserTypeController) //get users user type.
+app.post('/api/users/modules', postUserModulesController)
 
 app.get('/api/groups/:id1/users/:id2/tasks', GroupmemberTasksController); //All tasks assigned to a user in a group
 app.get('/api/groups/:id/tasks', getGroupsTasks); //All tasks belonging to a group
@@ -406,11 +523,15 @@ app.get('/api/tasks/:id1', getTask) //Specific Task
 
 app.post('/api/tasks', postTasksController); //Create a task for a group
 app.put('/api/tasks/:id', putTasksController); //Edit a task in a group
+app.post('/api/users/tasks', postTaskAssignmentController); //Assign user to task
+
 
 app.get('/api/tasks/:id1/posts', getTaskPosts);
+app.post('/api/tasks/posts', postFeedbackController);
 
 app.get('/api/modules', getModulesController);
 app.post('/api/modules', postModulesController);
+app.put('/api/modules/:id', putModulesController);
 
 
 
