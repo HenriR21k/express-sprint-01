@@ -124,17 +124,14 @@ const create = async (sql,record) => {
     try {
       const status = await database.query(sql,record);
 
-       const table = 'modules';
-       const whereField = 'modules.ModulesID';
-       const fields = ['modules.ModuleName, modules.ModuleDescription']
-       const sql2 = `SELECT ${fields} FROM ${table} WHERE ${whereField}=${status[0].insertId}`;
+     
 
 
       let isSuccess = false;
       let message = "";
       let result = null;
       try {
-      [result] = await database.query(sql2);
+      [result] = await database.query(sql);
       if (result.length === 0) message ="No records found";
       else {
         isSuccess = true;
@@ -317,7 +314,7 @@ const read = async (selectSql) => {
 const buildGroupsSelectSql = (id,variant) => {
   let sql = '';
   let table = 'Groups';  
-  let fields = ['Groups.GroupID', 'Groups.GroupName']
+  let fields = ['GroupID', 'GroupName']
   
   switch(variant) {
     default:
@@ -341,9 +338,9 @@ const getUserGroupsController = async (req, res) => {
 };
 
 const getGroupsInProjectsController = async (req, res) => {
-  const id = req.params.id;
+  const id = req.params.id1;
   //Build SQL
-  const sql = buildGroupsSelectSql(id, null, null);
+  const sql = buildGroupsSelectSql(id, null);
   const { isSuccess, result, message } = await read(sql);
   if(!isSuccess) return res.status(404).json({message});
 
@@ -368,6 +365,46 @@ const createGroup = () => {
   let mutableFields = ['GroupID','GroupName','projectID'];
   return `INSERT INTO ${table} ` + buildSetFields(mutableFields);
 };
+
+const postGroupmemberController = async (req, res) => {
+  // Validate request
+
+  // Access data
+  const sql = createGroupmember();
+  const { isSuccess, result, message: accessorMessage } = await create(sql,req.body);
+  if (!isSuccess) return res.status(400).json({ message: accessorMessage });
+  
+  // Response to request
+  res.status(201).json(result);
+};
+
+const createGroupmember = () => {
+  let table = 'groupmembers';
+  let mutableFields = ['UserID','GroupID','GroupStatus'];
+  return `INSERT INTO ${table} ` + buildSetFields(mutableFields);
+};
+
+
+const removeGroupmemberController = async (req, res) => {
+  // Validate request
+  const id = req.params.id;
+  
+  // Access data
+  const sql = removeGroupmember(id);
+  const { isSuccess, result, message: accessorMessage } = await remove(sql);
+  if (!isSuccess) return res.status(400).json({ message: accessorMessage });
+  
+  // Response to request
+  res.status(200).json(result);
+  
+}
+
+const removeGroupmember = (id) => {
+  let table = 'groupmembers';
+  return `DELETE from ${table} WHERE GroupmemberID=${id}`;
+};
+
+
 
 
 const buildTasksSelectSql = (id1, id2, variant) => {
@@ -403,7 +440,7 @@ const buildTasksSelectSql = (id1, id2, variant) => {
       sql = `SELECT ${fields} FROM ${extendedTable} WHERE tasks.GroupID=${id1} and taskassignment.userID=${id2} and tasks.TaskStatus=\'Outstanding\'`
       break;
     case 'TaskUsers':
-      fields = [`taskassignment.UserID, users.firstName, users.lastName`]
+      fields = [`taskassignment.UserID, taskassignment.TaskUserID, users.firstName, users.lastName`]
       table = `users ON taskassignment.UserID = users.UserID`
       extendedTable = `taskassignment INNER JOIN ${table}`
       sql = `SELECT ${fields} FROM ${extendedTable} WHERE taskassignment.TaskID=${id1}`
@@ -597,7 +634,7 @@ const buildUsersSelectSql = (id1, id2, variant) => {
       break;
     case "GroupsUsers":
       table = "groupmembers INNER JOIN users ON groupmembers.UserID=users.UserID"
-      sql = `SELECT Users.UserID ,firstName, lastName FROM ${table} WHERE groupmembers.GroupID = ${id1}`
+      sql = `SELECT Groupmembers.GroupmemberID, Users.UserID ,firstName, lastName FROM ${table} WHERE groupmembers.GroupID = ${id1}`
 
 
   }
@@ -626,6 +663,12 @@ const buildModulesSelectSQL = (id1, id2, variant) => {
     default:
       sql = `SELECT ${fields} FROM ${table}`;
       break;
+    case 'members':
+      sql = `SELECT Users.UserID, Users.firstName, Users.lastName
+              FROM ModuleMembers
+              INNER JOIN Users ON ModuleMembers.UserID=Users.UserID
+              WHERE ModuleMembers.ModuleID=${id1}
+      `
       
   }
 
@@ -638,6 +681,18 @@ const getModulesController = async (req, res) => {
   //Validate Request
 
   const sql = buildModulesSelectSQL(null, null, null)
+  const { isSuccess, result, message } = await read(sql);
+  if(!isSuccess) return res.status(404).json({message});
+
+  //Response to request
+  res.status(200).json(result);
+};
+
+const getUsersInModulesController = async (req, res) => {
+  
+  const id1 = req.params.id1
+
+  const sql = buildModulesSelectSQL(id1, null, 'members')
   const { isSuccess, result, message } = await read(sql);
   if(!isSuccess) return res.status(404).json({message});
 
@@ -736,6 +791,8 @@ app.get('/api/tasks/:id1/users', getUsersAssignedToTask);
 app.get('/api/groups/:id1/users', getGroupsUsersController);
 app.get('/api/projects/:id1/groups', getGroupsInProjectsController) //get all groups for a project
 app.post('/api/groups', postGroupController) //create a group for a project
+app.post('/api/group/user', postGroupmemberController) //Create a user joins a group
+app.delete('/api/groupmember/:id', removeGroupmemberController) //Removes relation between user and group
 
 app.get('/api/users/:id1', getUserById); //Gets a specific user
 app.get('/api/users/:id1/userType', getUserUserTypeController) //get users user type.
@@ -758,8 +815,10 @@ app.get('/api/tasks/:id1/posts', getTaskPosts);
 app.post('/api/tasks/posts', postFeedbackController); //Feedback for tasks
 
 app.get('/api/modules', getModulesController);
+app.get('/api/module/:id1/users', getUsersInModulesController) //get all users in a module
 app.post('/api/module', postModulesController);
 app.put('/api/modules/:id', putModulesController);
+
 
 app.get('/api/modules/:id/projects', getProjectController)
 app.post('/api/projects', postProjectController)
