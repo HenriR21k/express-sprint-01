@@ -55,6 +55,25 @@ const postTasksController = async (req, res) => {
     res.status(201).json(result);
   };
 
+  const deleteUserModulesController = async (req, res) => {
+    // Validate request
+    const id = req.params.id;
+    
+    // Access data
+    const sql = removeUserFromModule(id);
+    const { isSuccess, result, message: accessorMessage } = await remove(sql);
+    if (!isSuccess) return res.status(400).json({ message: accessorMessage });
+    
+    // Response to request
+    res.status(200).json(result);
+    
+  }
+
+  const removeUserFromModule = (id) => {
+    let table = 'modulemembers';
+    return `DELETE from ${table} WHERE UserModuleID=${id}`;
+  };
+
   const postFeedbackController = async (req, res) => {
     // Access data
     const sql = createPosts();
@@ -450,6 +469,14 @@ const buildTasksSelectSql = (id1, id2, variant) => {
               FROM taskassignment 
               INNER JOIN tasks ON tasks.TaskID=taskassignment.TaskID
               WHERE taskassignment.TaskID = ${id1} AND taskassignment.UserID = ${id2}`
+      break;
+    case 'TasksAssigned':
+      sql = `SELECT taskassignment.TaskID, tasks.TaskTitle,tasks.TaskStatus,tasks.TaskSetDate, tasks.TaskDeadline, groups.groupName
+              FROM taskassignment
+              LEFT JOIN tasks ON taskassignment.TaskID = tasks.TaskID
+              LEFT JOIN groups ON tasks.GroupID = groups.groupID
+              WHERE taskassignment.UserID = ${id1}`
+      break;
   }
 
   return sql;
@@ -524,6 +551,17 @@ const removeAssign = (id) => {
   return `DELETE from ${table} WHERE TaskUserID=${id}`;
 };
 
+const getTasksAssignedToUserController = async (req, res) => {
+  
+  const id1 = req.params.id1; //User ID
+
+  const sql = buildTasksSelectSql(id1, null, 'TasksAssigned')
+  const { isSuccess, result, message } = await read(sql);
+  if(!isSuccess) return res.status(404).json({message});
+
+  //Response to request
+  res.status(200).json(result);
+};
 
 const GroupmemberTasksController = async (req, res) => {
   const id1 = req.params.id1; //Group ID
@@ -635,6 +673,13 @@ const buildUsersSelectSql = (id1, id2, variant) => {
     case "GroupsUsers":
       table = "groupmembers INNER JOIN users ON groupmembers.UserID=users.UserID"
       sql = `SELECT Groupmembers.GroupmemberID, Users.UserID ,firstName, lastName FROM ${table} WHERE groupmembers.GroupID = ${id1}`
+      break;
+    case "allUsers":
+      sql = `SELECT * FROM Users`
+      break;
+    case "allStudents":
+        sql = `SELECT * FROM Users WHERE UserTypeID=${id1}`
+        break;
 
 
   }
@@ -642,6 +687,28 @@ const buildUsersSelectSql = (id1, id2, variant) => {
   return sql;
 
 }
+
+const getUsersController = async (req, res) => {
+  
+  const sql = buildUsersSelectSql(null, null, 'allUsers')
+  const { isSuccess, result, message } = await read(sql);
+  if(!isSuccess) return res.status(404).json({message});
+
+  //Response to request
+  res.status(200).json(result);
+};
+
+const getUsersByUserTypeController = async (req, res) => {
+
+  const id = req.params.id
+  
+  const sql = buildUsersSelectSql(id, null, 'allStudents')
+  const { isSuccess, result, message } = await read(sql);
+  if(!isSuccess) return res.status(404).json({message});
+
+  //Response to request
+  res.status(200).json(result);
+};
 
 const getUserById = async (req, res) => {
   const id1 = req.params.id1;
@@ -664,10 +731,10 @@ const buildModulesSelectSQL = (id1, id2, variant) => {
       sql = `SELECT ${fields} FROM ${table}`;
       break;
     case 'members':
-      sql = `SELECT Users.UserID, Users.firstName, Users.lastName
+      sql = `SELECT modulemembers.UserModuleID, Users.UserID, Users.firstName, Users.lastName
               FROM ModuleMembers
               INNER JOIN Users ON ModuleMembers.UserID=Users.UserID
-              WHERE ModuleMembers.ModuleID=${id1}
+              WHERE ModuleMembers.ModuleID=${id1} AND Users.UserTypeID=2
       `
       
   }
@@ -794,10 +861,13 @@ app.post('/api/groups', postGroupController) //create a group for a project
 app.post('/api/group/user', postGroupmemberController) //Create a user joins a group
 app.delete('/api/groupmember/:id', removeGroupmemberController) //Removes relation between user and group
 
+app.get('/api/users', getUsersController)
+app.get('/api/users/userType/:id', getUsersByUserTypeController) //gets all users by user type
 app.get('/api/users/:id1', getUserById); //Gets a specific user
 app.get('/api/users/:id1/userType', getUserUserTypeController) //get users user type.
-app.post('/api/users/modules', postUserModulesController)
 
+
+app.get('/api/users/:id1/tasks', getTasksAssignedToUserController)
 app.get('/api/groups/:id1/users/:id2/tasks', GroupmemberTasksController); //All tasks assigned to a user in a group
 app.get('/api/task/:id1/users/:id2', getIsUserAssignedToTaskController); //Checks to see if user has been assigned to a task
 app.post('/api/assignTask', postAssignUserToTaskController);
@@ -818,6 +888,8 @@ app.get('/api/modules', getModulesController);
 app.get('/api/module/:id1/users', getUsersInModulesController) //get all users in a module
 app.post('/api/module', postModulesController);
 app.put('/api/modules/:id', putModulesController);
+app.post('/api/users/modules', postUserModulesController) //Assign user to Module
+app.delete('/api/users/modules/:id', deleteUserModulesController) //UnAssign user to Module
 
 
 app.get('/api/modules/:id/projects', getProjectController)
