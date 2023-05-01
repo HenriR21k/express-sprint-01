@@ -475,7 +475,7 @@ const buildTasksSelectSql = (id1, id2, variant) => {
               FROM taskassignment
               LEFT JOIN tasks ON taskassignment.TaskID = tasks.TaskID
               LEFT JOIN groups ON tasks.GroupID = groups.groupID
-              WHERE taskassignment.UserID = ${id1}`
+              WHERE taskassignment.UserID = ${id1} and tasks.TaskStatus=\'Outstanding\'`
       break;
   }
 
@@ -869,6 +869,7 @@ app.get('/api/users/:id1/userType', getUserUserTypeController) //get users user 
 
 app.get('/api/users/:id1/tasks', getTasksAssignedToUserController)
 app.get('/api/groups/:id1/users/:id2/tasks', GroupmemberTasksController); //All tasks assigned to a user in a group
+app.get('/api/user/:id1/tasks', getTasksAssignedToUserController) //Get all tasks assigned to a user
 app.get('/api/task/:id1/users/:id2', getIsUserAssignedToTaskController); //Checks to see if user has been assigned to a task
 app.post('/api/assignTask', postAssignUserToTaskController);
 app.delete('/api/unAssignTask/:id', removeAssignedUserFromTaskController); 
