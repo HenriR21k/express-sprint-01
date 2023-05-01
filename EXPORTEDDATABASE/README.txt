@@ -1,0 +1,1 @@
+Please import the SQL file into phpmyadmin before running the backend and frontend to access and manipulate the DB
