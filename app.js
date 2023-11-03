@@ -656,7 +656,7 @@ const getGroupsUsersController = async (req, res) => {
 const buildUsersSelectSql = (id1, id2, variant) => {
   let sql = '';
   let fields = ['firstName, lastName'];
-  let table = 'Users';
+  let table = 'users';
   let extendedTable = '';
   let join = ''
 
@@ -675,7 +675,7 @@ const buildUsersSelectSql = (id1, id2, variant) => {
       sql = `SELECT Groupmembers.GroupmemberID, Users.UserID ,firstName, lastName FROM ${table} WHERE groupmembers.GroupID = ${id1}`
       break;
     case "allUsers":
-      sql = `SELECT * FROM Users`
+      sql = `SELECT * FROM users`
       break;
     case "allStudents":
         sql = `SELECT * FROM Users WHERE UserTypeID=${id1}`
