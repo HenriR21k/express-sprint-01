@@ -306,13 +306,13 @@ const updateProjects = async (sql, id, record) => {
 
 const buildUsersGroupsSelectSql = (id,variant) => {
   let sql = '';
-  let table = 'Groupmembers INNER JOIN Groups ON Groupmembers.GroupID=Groups.GroupID ';  
-  let fields = ['Groups.GroupID', 'Groups.GroupName']
+  let table = 'groupmembers INNER JOIN groups ON groupmembers.GroupID=groups.GroupID ';  
+  let fields = ['groups.groupID', 'groups.groupName']
   
   switch(variant) {
     default:
       sql = `SELECT ${fields} FROM ${table}`;
-      if (id) sql += `WHERE Groupmembers.UserID=${id}`
+      if (id) sql += `WHERE groupmembers.UserID=${id}`
   }
 
   return sql;
